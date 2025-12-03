@@ -5,7 +5,6 @@ using UnityEngine;
 
 public class SimpleNeuralNet : IComparable<SimpleNeuralNet>
 {
-    // Estrutura da rede: índices representam camadas, valores representam qtd neurônios
     private int[] layers;
     private float[][] neurons; // Matriz de valores dos neurônios
     private float[][][] weights; // Matriz tridimensional de pesos [camada][neuronio_origem][neuronio_destino]

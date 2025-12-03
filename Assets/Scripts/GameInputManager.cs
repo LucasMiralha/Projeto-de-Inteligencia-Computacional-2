@@ -16,6 +16,7 @@ public class GameInputManager : MonoBehaviour
     [Header("Agent Camera Settings")]
     public Vector3 followOffset = new Vector3(0, 5, -8); // Posição atrás e acima do agente
     public float smoothSpeed = 5f; // Suavidade do movimento
+    public float lookUp = 0.3f;
 
     [Header("Input Settings")]
     public InputActionAsset inputAsset;
@@ -125,19 +126,14 @@ public class GameInputManager : MonoBehaviour
     {
         if (isControllingAgent && currentTarget != null)
         {
-            // --- Opção 1: Câmera Fixa atrás do agente (estilo Mario Kart / Corrida) ---
-            // Calcula posição desejada baseada na rotação do agente
             Vector3 desiredPosition = currentTarget.transform.position + (currentTarget.transform.rotation * followOffset);
-
-            // --- Opção 2: Câmera com Offset Global (não gira junto com o agente, bom para RPG top-down) ---
-            // Vector3 desiredPosition = currentTarget.transform.position + followOffset;
 
             // Suavização (Lerp)
             Vector3 smoothedPosition = Vector3.Lerp(agentCam.transform.position, desiredPosition, smoothSpeed * Time.deltaTime);
             agentCam.transform.position = smoothedPosition;
 
             // Faz a câmera olhar para o agente
-            agentCam.transform.LookAt(currentTarget.transform.position + Vector3.up * 0.2f);
+            agentCam.transform.LookAt(currentTarget.transform.position + Vector3.up * lookUp);
         }
         else if (isControllingAgent && currentTarget == null)
         {

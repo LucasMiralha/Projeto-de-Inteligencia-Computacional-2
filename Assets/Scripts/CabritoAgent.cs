@@ -5,18 +5,18 @@ public class CabritoAgent : MonoBehaviour
 {
     [Header("Network & AI")]
     public SimpleNeuralNet brain;
-    public bool useAI = true; // Flag para alternar entre IA e Humano
+    public bool useAI = true;
 
 
     public float acceleration = 20f;
     public float rotationSpeed = 100f;
-    public LayerMask obstacleLayer; // 'Wall' e 'Obstacle'
+    public LayerMask obstacleLayer;
 
 
-    public Transform sensorOrigin; // Posição dos olhos/nariz
+    public Transform sensorOrigin;
     public float sensorRange = 15f;
-    // Ângulos dos 5 sensores: EsqTotal, Esq, Frente, Dir, DirTotal
-    private float[] sensorAngles = new float[] { 30, 60, 90, 120, 150 };
+    // Ângulos dos 5 sensores
+    private float[] sensorAngles = new float[] { -60, -30, 0, 30, 60 };
 
 
     public bool isAlive = true;
@@ -25,7 +25,7 @@ public class CabritoAgent : MonoBehaviour
     private Vector3 lastPos;
     private Rigidbody rb;
 
-    // Armazena inputs manuais recebidos do InputManager
+    
     private Vector2 manualInput;
 
     void Awake()
@@ -57,12 +57,10 @@ public class CabritoAgent : MonoBehaviour
         float steer = 0f;
         float gas = 0f;
 
-        // 1. Coleta de Dados Sensoriais
         float[] sensorReadings = GetSensorReadings();
 
         if (useAI && brain != null)
         {
-            // 2. IA decide
             float[] outputs = brain.FeedForward(sensorReadings);
             if (outputs.Length >= 2)
             {
@@ -78,15 +76,13 @@ public class CabritoAgent : MonoBehaviour
         }
         else
         {
-            // 3. Humano decide (Cloning Behaviour)
+            // Cloning Behaviour
             steer = manualInput.x;
             gas = Mathf.Clamp01(manualInput.y);
         }
 
-        // 4. Aplicação Física
         Move(steer, gas);
 
-        // 5. Cálculo de Fitness
         CalculateFitness();
     }
 
@@ -116,22 +112,16 @@ public class CabritoAgent : MonoBehaviour
 
     private void Move(float steer, float gas)
     {
-        // Rotação
         transform.Rotate(Vector3.up * steer * rotationSpeed * Time.fixedDeltaTime);
-        // Translação (Aceleração)
         rb.AddForce(transform.forward * gas * acceleration, ForceMode.Acceleration);
     }
 
     private void CalculateFitness()
     {
-        // Recompensa principal: distância percorrida para frente
-        // Usamos a distância Euclidiana do ponto inicial, mas projetada no eixo Z se o objetivo for Z+
-        // Ou simplesmente distância percorrida acumulada.
-
         float distDelta = Vector3.Distance(transform.position, lastPos);
 
-        // Penalidade simples para spinning (girar parado): 
-        // Se girou muito mas não saiu do lugar, não ganha ponto.
+        // Penalidade simples para girar parado
+        // Se girou muito mas não saiu do lugar, não ganha pontos
         if (distDelta > 0.01f)
         {
             distanceTravelled += distDelta;
@@ -150,8 +140,7 @@ public class CabritoAgent : MonoBehaviour
     {
         if (!isAlive) return;
 
-        // Verifica colisão com "Wall" ou "Obstacle"
-        if (collision.gameObject.CompareTag("Wall") || collision.gameObject.CompareTag("Obstacle"))
+        if (collision.gameObject.CompareTag("Obstacle"))
         {
             Die();
         }
@@ -165,10 +154,14 @@ public class CabritoAgent : MonoBehaviour
         rb.isKinematic = true;
 
         // morte (ficar de cabeça pra baixo)
-        
+        Vector3 tempPosition = transform.position;
+        tempPosition.y = 0.25f;
+        transform.position = tempPosition;
+        Vector3 currentRotation = transform.localEulerAngles;
+        currentRotation.x = 180f;
+        transform.localEulerAngles = currentRotation;
     }
 
-    // Método chamado externamente pelo Input Manager
     public void SetInput(Vector2 input)
     {
         manualInput = input;

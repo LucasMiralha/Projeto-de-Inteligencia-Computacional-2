@@ -75,7 +75,6 @@ public class CabritoController : MonoBehaviour
         obstacleSpawner.SpawnObstacles();
 
         // Embaralha spawn points para aleatoriedade de posição
-        // Usamos uma lista temporária embaralhada
         List<Transform> shuffledSpawns = spawnPoints.OrderBy(x => UnityEngine.Random.value).ToList();
 
         for (int i = 0; i < populationSize; i++)
@@ -94,7 +93,6 @@ public class CabritoController : MonoBehaviour
 
     void Update()
     {
-        // Controle de Tempo da Engine
         Time.timeScale = timeScale;
 
         // Verifica se todos morreram
