@@ -1,11 +1,22 @@
 using UnityEngine;
 using UnityEngine.InputSystem; // Requer New Input System package
+using System.Collections.Generic;
 
 public class CabritoAgent : MonoBehaviour
 {
     [Header("Network & AI")]
     public SimpleNeuralNet brain;
     public bool useAI = true;
+
+
+    [Header("Survival Settings")]
+    public float maxTimeWithoutCheckpoint = 180f; //tempo em segundos
+    private float timeSinceLastCheckpoint = 0f;
+
+
+    private List<Transform> checkpoints;
+    private int currentCheckpointIndex = 0;
+    private Transform currentTarget;
 
 
     public float acceleration = 20f;
@@ -20,30 +31,51 @@ public class CabritoAgent : MonoBehaviour
 
 
     public bool isAlive = true;
-    public float distanceTravelled = 0f;
-    private Vector3 startPos;
-    private Vector3 lastPos;
-    private Rigidbody rb;
+    public bool reachedTarget = false;
 
-    
+
+    public float fitness = 0f; // Variável local para visualização
+    private float initialDistanceToTarget;
+    private float fitnessBonus = 0f;
+
+
+    private Rigidbody rb;
     private Vector2 manualInput;
 
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
-        startPos = transform.position;
-        lastPos = startPos;
     }
 
-    public void ResetAgent(Vector3 pos, Quaternion rot)
+    public void ResetAgent(Vector3 pos, Quaternion rot, List<Transform> levelCheckpoints)
     {
         transform.position = pos;
         transform.rotation = rot;
+
+
+        this.checkpoints = new List<Transform>(levelCheckpoints);
+
+
+        currentCheckpointIndex = 0;
+        fitnessBonus = 0f;
+        fitness = 0f;
+
+
+        timeSinceLastCheckpoint = 0f;
+
+
+        if (checkpoints != null && checkpoints.Count > 0)
+        {
+            currentTarget = checkpoints[currentCheckpointIndex];
+            initialDistanceToTarget = Vector3.Distance(transform.position, currentTarget.position);
+        }
+
+
         rb.linearVelocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
         isAlive = true;
-        distanceTravelled = 0f;
-        lastPos = pos;
+        reachedTarget = false;
+
 
         // Garante que a física e renderização estejam ativas
         GetComponent<Collider>().enabled = true;
@@ -52,6 +84,9 @@ public class CabritoAgent : MonoBehaviour
 
     void FixedUpdate()
     {
+        if (!isAlive || reachedTarget) return;
+
+        CheckSurvivalTimer();
         if (!isAlive) return;
 
         float steer = 0f;
@@ -62,14 +97,14 @@ public class CabritoAgent : MonoBehaviour
         if (useAI && brain != null)
         {
             float[] outputs = brain.FeedForward(sensorReadings);
+
             if (outputs.Length >= 2)
             {
                 steer = outputs[0];
                 gas = Mathf.Clamp01(outputs[1]);
             }
-            else if (outputs.Length == 1)
+            else if (outputs.Length == 1) //fallback
             {
-                // Fallback se a rede só tiver 1 saída (apenas vira, aceleração constante)
                 steer = outputs[0];
                 gas = 1f;
             }
@@ -86,9 +121,23 @@ public class CabritoAgent : MonoBehaviour
         CalculateFitness();
     }
 
+    private void CheckSurvivalTimer()
+    {
+        timeSinceLastCheckpoint += Time.fixedDeltaTime;
+
+        if (timeSinceLastCheckpoint >= maxTimeWithoutCheckpoint)
+        {
+            // Opcional: Penalidade extra no fitness por morrer de "velhice/preguiça"
+            if (brain != null) brain.fitness -= 50f;
+
+            Debug.Log($"{name} morreu por inatividade (Time Out).");
+            Die();
+        }
+    }
+
     private float[] GetSensorReadings()
     {
-        float[] readings = new float[sensorAngles.Length];
+        float[] readings = new float[sensorAngles.Length + 2];
         for (int i = 0; i < sensorAngles.Length; i++)
         {
             Vector3 dir = Quaternion.Euler(0, sensorAngles[i], 0) * transform.forward;
@@ -107,6 +156,20 @@ public class CabritoAgent : MonoBehaviour
                 Debug.DrawLine(sensorOrigin.position, sensorOrigin.position + dir * sensorRange, Color.green);
             }
         }
+
+        if (currentTarget != null)
+        {
+            Vector3 directionToTarget = (currentTarget.position - transform.position).normalized;
+            Vector3 localDir = transform.InverseTransformDirection(directionToTarget);
+
+            readings[5] = localDir.x; // O alvo está à esquerda ou direita?
+            readings[6] = localDir.z; // O alvo está na frente ou atrás?
+        }
+        else
+        {
+            readings[5] = 0f;
+            readings[6] = 0f;
+        }
         return readings;
     }
 
@@ -118,31 +181,66 @@ public class CabritoAgent : MonoBehaviour
 
     private void CalculateFitness()
     {
-        float distDelta = Vector3.Distance(transform.position, lastPos);
+        if (currentTarget == null) return;
 
-        // Penalidade simples para girar parado
-        // Se girou muito mas não saiu do lugar, não ganha pontos
-        if (distDelta > 0.01f)
-        {
-            distanceTravelled += distDelta;
-        }
+        float currentDistance = Vector3.Distance(transform.position, currentTarget.position);
+        float progressToCurrent = initialDistanceToTarget - currentDistance;
 
-        lastPos = transform.position;
+        // Fitness Total = Bônus acumulado dos checkpoints passados + progresso para o atual
+        // Penalidade de tempo reduzida para não matar agentes que demoram em labirintos
+        float velocityPenalty = rb.linearVelocity.magnitude < 1f ? 0.1f : 0f;
+
+        fitness = fitnessBonus + Mathf.Max(0, progressToCurrent) - (Time.fixedDeltaTime * 0.01f) - velocityPenalty;
 
         if (brain != null)
         {
-            // Função de Fitness: Distância + Bônus de Sobrevivência
-            brain.fitness = distanceTravelled;
+            brain.fitness = fitness;
         }
     }
 
     void OnCollisionEnter(Collision collision)
     {
-        if (!isAlive) return;
+        if (!isAlive && !reachedTarget) return;
 
-        if (collision.gameObject.CompareTag("Obstacle"))
+        if (collision.gameObject.CompareTag("Wall") || collision.gameObject.CompareTag("Obstacle"))
         {
             Die();
+        }
+    }
+
+    void OnTriggerEnter(Collider other)
+    {
+        // Verifica se bateu em um checkpoint ou na linha de chegada
+        if (other.CompareTag("Checkpoint") || other.CompareTag("FinishLine"))
+        {
+            // Verifica se é o objeto do alvo ATUAL (para evitar pular checkpoints sem querer)
+            if (other.transform == currentTarget)
+            {
+                NextCheckpoint();
+            }
+        }
+    }
+
+    private void NextCheckpoint()
+    {
+        // 1. Dá uma recompensa grande por ter chegado aqui
+        fitnessBonus += 500f;
+
+        // 2. Avança o índice
+        currentCheckpointIndex++;
+        timeSinceLastCheckpoint = 0f;
+
+        // 3. Verifica se acabou a lista
+        if (currentCheckpointIndex >= checkpoints.Count)
+        {
+            Win();
+        }
+        else
+        {
+            // 4. Define o novo alvo e reseta a distância de referência
+            currentTarget = checkpoints[currentCheckpointIndex];
+            initialDistanceToTarget = Vector3.Distance(transform.position, currentTarget.position);
+            Debug.Log("Checkpoint alcançado! Indo para o próximo...");
         }
     }
 
@@ -160,6 +258,21 @@ public class CabritoAgent : MonoBehaviour
         Vector3 currentRotation = transform.localEulerAngles;
         currentRotation.x = 180f;
         transform.localEulerAngles = currentRotation;
+    }
+
+    public void Win()
+    {
+        if (reachedTarget) return;
+        reachedTarget = true;
+        isAlive = false;
+
+        // Bônus final massivo
+        if (brain != null) brain.fitness += 2000f;
+
+        rb.linearVelocity = Vector3.zero;
+        rb.isKinematic = true;
+
+        Debug.Log("Circuito Finalizado!");
     }
 
     public void SetInput(Vector2 input)

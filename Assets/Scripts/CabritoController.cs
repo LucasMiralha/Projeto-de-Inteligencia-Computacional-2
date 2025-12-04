@@ -10,6 +10,9 @@ public class CabritoController : MonoBehaviour
     public int populationSize = 50;
     public List<Transform> spawnPoints; // Pontos fixos de spawn
 
+    [Header("Circuit Data")]
+    public List<Transform> circuitCheckpoints;
+
     [Header("Evolution Parameters")]
     public float mutationRate = 0.05f;
     public float mutationStrength = 0.5f;
@@ -23,8 +26,8 @@ public class CabritoController : MonoBehaviour
 
     public ObstacleSpawner obstacleSpawner;
 
-    // Topologia: 5 inputs, 2 hidden layers de 10, 2 outputs
-    private int[] networkStructure = new int[] { 5, 10, 10, 2 };
+    // Topologia: 7 inputs, 2 hidden layers de 10, 2 outputs
+    private int[] networkStructure = new int[] { 7, 10, 10, 2 };
 
     private List<SimpleNeuralNet> population;
     private List<CabritoAgent> activeAgents;
@@ -85,7 +88,7 @@ public class CabritoController : MonoBehaviour
 
             // Injeta o cérebro
             agent.brain = population[i];
-            agent.ResetAgent(spawn.position, spawn.rotation);
+            agent.ResetAgent(spawn.position, spawn.rotation, circuitCheckpoints);
 
             activeAgents.Add(agent);
         }

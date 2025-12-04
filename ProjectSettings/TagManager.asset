@@ -7,6 +7,7 @@ TagManager:
   - Obstacle
   - Wall
   - Checkpoint
+  - FinishLine
   layers:
   - Default
   - TransparentFX
