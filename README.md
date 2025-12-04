@@ -7,7 +7,7 @@ Este repositório contém a implementação e replicação do experimento cient�
 ---
 
 ## Artigo Base
-O trabalho consiste na replicação dos métodos e resultados apresentados no seguinte artigo (publicado nos últimos 7 anos):
+O trabalho consiste na replicação dos métodos e resultados apresentados no seguinte artigo:
 
 * **Título:** *Reinforcement learning for obstacle avoidance application in unity ml-agents*
 * **Autores:** Reza Mahmoudi e Armantas Ostreika
