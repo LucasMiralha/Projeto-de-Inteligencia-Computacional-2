@@ -80,6 +80,9 @@ public class GameInputManager : MonoBehaviour
                 freeCam.gameObject.SetActive(false);
                 agentCam.gameObject.SetActive(true);
 
+                // Troca a escala de tempo
+                Time.timeScale = 1f;
+
                 // Posiciona a câmera do agente imediatamente no primeiro frame para evitar "pulo" visual
                 Vector3 desiredPos = currentTarget.transform.position + currentTarget.transform.TransformDirection(followOffset); // Local Space
                                                                                                                                   // Ou se preferir offset global (sem girar com o agente): 
@@ -109,6 +112,9 @@ public class GameInputManager : MonoBehaviour
             // Troca Câmeras
             agentCam.gameObject.SetActive(false);
             freeCam.gameObject.SetActive(true);
+
+            // Troca a escala de tempo
+            Time.timeScale = cabritoController.timeScale;
 
             if (freeCamScript) freeCamScript.enabled = true;
 

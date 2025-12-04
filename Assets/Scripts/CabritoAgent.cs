@@ -240,7 +240,7 @@ public class CabritoAgent : MonoBehaviour
             // 4. Define o novo alvo e reseta a distância de referência
             currentTarget = checkpoints[currentCheckpointIndex];
             initialDistanceToTarget = Vector3.Distance(transform.position, currentTarget.position);
-            Debug.Log("Checkpoint alcançado! Indo para o próximo...");
+            Debug.Log($"{name} Alcançou o Checkpoint " + currentCheckpointIndex + "! Indo para o próximo...");
         }
     }
 

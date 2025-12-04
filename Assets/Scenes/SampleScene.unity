@@ -22262,12 +22262,12 @@ MonoBehaviour:
   - {fileID: 1556035509}
   - {fileID: 123904312}
   - {fileID: 1908619422}
-  - {fileID: 2144969792}
   - {fileID: 1883601008}
+  - {fileID: 2144969792}
   - {fileID: 1557483603}
   - {fileID: 1744363280}
-  mutationRate: 1
-  mutationStrength: 5
+  mutationRate: 0.2
+  mutationStrength: 1
   elitismCount: 2
   maxGenerations: 1000
   timeScale: 100
@@ -24171,7 +24171,7 @@ GameObject:
   - component: {fileID: 1744363277}
   m_Layer: 0
   m_Name: FinishLine
-  m_TagString: FinishLine
+  m_TagString: Checkpoint
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0

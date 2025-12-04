@@ -42,10 +42,11 @@ public class CabritoController : MonoBehaviour
 
     void Start()
     {
+        Time.timeScale = timeScale;
         // Setup CSV
         csvPath = Application.dataPath + "/evolution_data_mutationRate=" + mutationRate + "_mutationStrength=" + mutationStrength + ".csv";
         // Cria cabeçalho se arquivo não existe ou sobrescreve
-        File.WriteAllText(csvPath, "Generation,BestFitness,AvgFitness,WorstFitness\n");
+        File.WriteAllText(csvPath, "Generation,BestFitness,AvgFitness,globalBestFitness,WorstFitness\n");
 
         InitPopulation();
     }
@@ -101,8 +102,6 @@ public class CabritoController : MonoBehaviour
 
     void Update()
     {
-        Time.timeScale = timeScale;
-
         // Verifica se todos morreram
         bool anyoneAlive = false;
         foreach (var agent in activeAgents)
@@ -151,7 +150,7 @@ public class CabritoController : MonoBehaviour
         foreach (var n in population) avgFit += n.fitness;
         avgFit /= population.Count;
 
-        LogToCSV(currentGeneration, generationBestFit, avgFit, worstFit);
+        LogToCSV(currentGeneration, generationBestFit, avgFit, globalBestFitness, worstFit);
         Debug.Log($"Gen {currentGeneration}: LocalBest={generationBestFit:F2} | GlobalBest={globalBestFitness:F2}");
 
         // 3. Seleção e Reprodução
@@ -207,9 +206,9 @@ public class CabritoController : MonoBehaviour
         return best;
     }
 
-    void LogToCSV(int gen, float best, float avg, float worst)
+    void LogToCSV(int gen, float best, float avg, float globalBest, float worst)
     {
-        string line = $"{gen},{best.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)},{avg.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)},{worst.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)}\n";
+        string line = $"{gen},{best.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)},{avg.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)}, {globalBest.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)},{worst.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)}\n";
         File.AppendAllText(csvPath, line);
     }
 
