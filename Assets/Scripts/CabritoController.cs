@@ -24,6 +24,11 @@ public class CabritoController : MonoBehaviour
     public int currentGeneration = 0;
 
 
+    // Mantém a melhor rede neural para tentar manter uma evolução constante
+    private SimpleNeuralNet globalBestGenome;
+    private float globalBestFitness = -float.MaxValue;
+
+
     public ObstacleSpawner obstacleSpawner;
 
     // Topologia: 7 inputs, 2 hidden layers de 10, 2 outputs
@@ -38,7 +43,7 @@ public class CabritoController : MonoBehaviour
     void Start()
     {
         // Setup CSV
-        csvPath = Application.dataPath + "/evolution_data.csv";
+        csvPath = Application.dataPath + "/evolution_data_mutationRate=" + mutationRate + "_mutationStrength=" + mutationStrength + ".csv";
         // Cria cabeçalho se arquivo não existe ou sobrescreve
         File.WriteAllText(csvPath, "Generation,BestFitness,AvgFitness,WorstFitness\n");
 
@@ -129,33 +134,51 @@ public class CabritoController : MonoBehaviour
         population.Sort();
         population.Reverse();
 
+        SimpleNeuralNet currentBest = population[0];
+
+        if (currentBest.fitness > globalBestFitness)
+        {
+            globalBestFitness = currentBest.fitness;
+            globalBestGenome = new SimpleNeuralNet(currentBest);
+
+            Debug.Log($"NOVO RECORDE HISTÓRICO! Gen {currentGeneration} - Fitness: {globalBestFitness:F2}");
+        }
+
         // 2. Coleta de Dados e CSV
-        float bestFit = population[0].fitness;
+        float generationBestFit = currentBest.fitness;
         float worstFit = population[population.Count - 1].fitness;
         float avgFit = 0f;
         foreach (var n in population) avgFit += n.fitness;
         avgFit /= population.Count;
 
-        LogToCSV(currentGeneration, bestFit, avgFit, worstFit);
-        Debug.Log($"Gen {currentGeneration}: Best={bestFit:F2} Avg={avgFit:F2}");
+        LogToCSV(currentGeneration, generationBestFit, avgFit, worstFit);
+        Debug.Log($"Gen {currentGeneration}: LocalBest={generationBestFit:F2} | GlobalBest={globalBestFitness:F2}");
 
         // 3. Seleção e Reprodução
         List<SimpleNeuralNet> newPop = new List<SimpleNeuralNet>();
 
-        // Elitismo: Mantém os N melhores sem alteração
-        for (int i = 0; i < elitismCount; i++)
+        if (globalBestGenome != null)
         {
-            newPop.Add(new SimpleNeuralNet(population[i]));
+            newPop.Add(new SimpleNeuralNet(globalBestGenome));
+        }
+
+        int currentElitismStart = (newPop.Count > 0) ? 1 : 0;
+
+        for (int i = 0; i < elitismCount - newPop.Count; i++)
+        {
+            if (i < population.Count)
+            {
+                newPop.Add(new SimpleNeuralNet(population[i]));
+            }
         }
 
         // Preenche o resto
         while (newPop.Count < populationSize)
         {
-            // Seleção por Torneio (Pega 2 aleatórios, vence o melhor)
-            SimpleNeuralNet parent1 = TournamentSelection();
-            SimpleNeuralNet parent2 = TournamentSelection();
+            SimpleNeuralNet parent1 = globalBestGenome;
+            SimpleNeuralNet parent2 = TournamentSelection(); // Seleção por torneio vence o melhor
 
-            // Crossover simples (neste caso, copia Parent1 e muta. Pode ser expandido)
+            // Crossover simples (neste caso, copia Parent1 e muta)
             SimpleNeuralNet child = new SimpleNeuralNet(parent1);
 
             // Mutação
@@ -168,14 +191,11 @@ public class CabritoController : MonoBehaviour
 
         // Reinicia obstáculos (para garantir que agentes não decorem apenas um layout fixo)
         FindAnyObjectByType<ObstacleSpawner>()?.SpawnObstacles();
-
-        // Recria agentes físicos
         CreateAgents();
     }
 
     SimpleNeuralNet TournamentSelection()
     {
-        // Pega 3 aleatórios, retorna o melhor
         int k = 3;
         SimpleNeuralNet best = null;
         for (int i = 0; i < k; i++)

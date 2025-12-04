@@ -22266,11 +22266,11 @@ MonoBehaviour:
   - {fileID: 1883601008}
   - {fileID: 1557483603}
   - {fileID: 1744363280}
-  mutationRate: 0.1
-  mutationStrength: 1
-  elitismCount: 5
+  mutationRate: 1
+  mutationStrength: 5
+  elitismCount: 2
   maxGenerations: 1000
-  timeScale: 50
+  timeScale: 100
   currentGeneration: 0
   obstacleSpawner: {fileID: 1644958611}
 --- !u!114 &1644958611
@@ -22286,7 +22286,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ObstacleSpawner
   obstaclePrefab: {fileID: 4109794871377241543, guid: 3c7ed2ed685afbf48afd21072b98dd51, type: 3}
-  obstaclesToSpawn: 200
+  obstaclesToSpawn: 50
   spawnPositions:
   - {fileID: 555678905}
   - {fileID: 1391847680}
